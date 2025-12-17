@@ -18,9 +18,9 @@ fi
 if [ ! -e $ROOTFS_DIR/.installed ]; then
   echo "#######################################################################################"
   echo "#"
-  echo "#                                      Foxytoux INSTALLER"
+  echo "#                                     mehraz INSTALLER"
   echo "#"
-  echo "#                           Copyright (C) 2024, RecodeStudios.Cloud"
+  echo "#                           Copyright (C) 2025, RecodeStudios.Cloud"
   echo "#"
   echo "#"
   echo "#######################################################################################"
@@ -31,7 +31,7 @@ fi
 case $install_ubuntu in
   [yY][eE][sS])
     wget --tries=$max_retries --timeout=$timeout --no-hsts -O /tmp/rootfs.tar.gz \
-      "http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.4-base-${ARCH_ALT}.tar.gz"
+      "http://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04.1-base-${ARCH_ALT}.tar.gz"
     tar -xf /tmp/rootfs.tar.gz -C $ROOTFS_DIR
     ;;
   *)
@@ -62,6 +62,31 @@ fi
 if [ ! -e $ROOTFS_DIR/.installed ]; then
   printf "nameserver 1.1.1.1\nnameserver 1.0.0.1" > ${ROOTFS_DIR}/etc/resolv.conf
   rm -rf /tmp/rootfs.tar.xz /tmp/sbin
+
+  # Setup KVM access
+  echo "Setting up KVM access..."
+
+  # Create KVM setup script that will run inside the container
+  cat > ${ROOTFS_DIR}/root/setup_kvm.sh << 'EOF'
+#!/bin/bash
+apt-get update
+apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils virt-manager qemu-system-x86
+apt-get install -y cpu-checker
+apt-get clean
+
+# Check if KVM is available
+if [ -e /dev/kvm ]; then
+    echo "KVM device is available at /dev/kvm"
+    chmod 666 /dev/kvm 2>/dev/null || echo "Note: Could not change /dev/kvm permissions"
+else
+    echo "Warning: /dev/kvm not found. KVM may not be available."
+fi
+
+# Check virtualization support
+kvm-ok || echo "KVM acceleration may not be available"
+EOF
+
+  chmod +x ${ROOTFS_DIR}/root/setup_kvm.sh
   touch $ROOTFS_DIR/.installed
 fi
 
@@ -81,4 +106,5 @@ display_gg
 
 $ROOTFS_DIR/usr/local/bin/proot \
   --rootfs="${ROOTFS_DIR}" \
-  -0 -w "/root" -b /dev -b /sys -b /proc -b /etc/resolv.conf --kill-on-exit
+  -0 -w "/root" -b /dev -b /sys -b /proc -b /etc/resolv.conf -b /dev/kvm -b /dev/net/tun --kill-on-exit
+
