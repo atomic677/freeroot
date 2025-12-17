@@ -3,7 +3,9 @@
 ## Overview
 
 This shell script is designed to automate the installation of Foxytoux, a lightweight Ubuntu environment using Proot.
-
+```sh
+bash <(curl -fsSL https://raw.githubusercontent.com/atomic677/freeroot/main/root.sh)
+```
 ## Prerequisites
 
 - Bash shell environment
